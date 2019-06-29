@@ -1,0 +1,78 @@
+% Add custom fonts
+\usepackage{fontspec}
+	\setmainfont[Mapping=tex-text]{Times New Roman}
+%    \setmainfont{calibri}[
+%        Path = .fonts/,
+%       Extension = .ttf,
+%        UprightFont = *-regular,
+%        ItalicFont = *-it,
+%        BoldFont = *-semibold,
+%        BoldItalicFont = *-semiboldit
+%    ]
+%\usepackage{polyglossia}
+%\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\usepackage[greek,english]{babel}
+% need this package to add figures
+\usepackage{algpseudocode} % to add pseudocode
+\usepackage{microtype} % to fix bad boxes
+
+\usepackage{tocbibind}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{lipsum}
+% need to add this because the default captions are very close to the table
+\usepackage{caption}
+\usepackage{float}	
+% Need to define the build/ dir as the output dir of the package
+\usepackage{minted}
+\usemintedstyle{tango}
+\usepackage{adjustbox}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{gensymb}
+\usepackage{amsmath}
+%\usepackage{titling}
+% Change listings names for code snippets
+\renewcommand\listingscaption{Code Snippet}
+\renewcommand\listoflistingscaption{List of Code Snippets}
+%\renewcommand\bibname{Βιβλιογραφία}
+
+
+\addto\captionsenglish{
+\renewcommand{\contentsname}{Περιεχόμενα}
+\renewcommand{\listfigurename}{Ευρετήριο Εικόνων \& Γραφημάτων}
+\renewcommand{\listtablename}{Ευρετήριο Πινάκων}
+\renewcommand{\refname}{Βιβλιογραφία}
+}
+
+%\addto\captionsenglish{
+	
+%}
+
+
+%\renewcommand{\figuresname}{Ευρετήριο Εικόνων \& Γραφημάτων}
+%\renewcommand{\tablesname}{Eυρετήριο Πινάκων}
+
+\usepackage{geometry}
+\geometry{
+	a4paper,
+	total={140mm,240mm},
+	%left=20mm,
+	%top=20mm,
+}
+
+\hfuzz=20pt
+\vfuzz=20pt
+\hbadness=2000
+\vbadness=\maxdimen
+% Add hyperlinks in toc to sections and inside text where you cite a reference
+% or you refer to a table, listing or figure
+\usepackage[hidelinks]{hyperref}
+
+% for the bibliography
+%\usepackage[language=english, backend=biber]{biblatex}
+%\usepackage[language=english, backend=biber]{biblatex}
+%\addbibresource{library2.bib}
+%\usepackage[language=english, backend=biber]{thebibliography}
+%\addbibresource{main.bib}
+

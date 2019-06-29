@@ -1,0 +1,348 @@
+\section{Υλοποίηση}
+
+Σε αυτό το κεφάλαιο παρουσιάζεται η εφαρμογή η οποία αναπτύχθηκε για την αντιμετώπιση του ζητήματος που διαπραγματεύεται η διπλωματική. Θα επεξηγηθούν οι αλγόριθμοι που χρησιμοποιήθηκαν και ο τρόπος αλληλεπίδρασης αυτών μέσω του λογισμικού που τους ελέγχει. Για το σκοπό αυτό θα αναλυθούν οι κόμβοι από τους οποίους αποτελείται το σύστημα. Για καλύτερη κατανόηση θα παρουσιαστούν ορισμένα διαγράμματα ροής. 
+
+\subsection{Οι κόμβοι του συστήματος}
+
+Οι κόμβοι από τους οποίους αποτελείται το σύστημα είναι οι παρακάτω:  
+\begin{itemize}
+	\item \textbf{gazebo}: ο κόμβος του προσομοιωτή
+	\item \textbf{gazebo\_gui}: το γραφικό περιβάλλον του κόμβου μέσω του οποίου κανείς μπορεί να επεξεργαστεί τα μοντέλα ή τον κόσμο του gazebo.
+	\item \textbf{map\_server}: κόμβος του πακέτου navigation ο οποίος φορτώνει τον χάρτη
+	\item \textbf{rviz}: μέσα από αυτόν τον κόμβο βλέπουμε τον κόσμο που αντιλαμβάνεται το ρομπότ 
+	\item \textbf{target\_select\_node}: αναλαμβάνει να επιλέξει στόχο για το κάθε ρομπότ
+	\item \textbf{rosout}: κόμβος του ros υπεύθυνος για την καταγραφή log files και εύρεση τυχόν σφαλμάτων του συστήματος 
+	\item \textbf{coverage\_map\_merger}: ενώνει τους χάρτες κάλυψης των δύο ρομπότ. Αυτόν τον νέο χάρτη κάλυψης χρησιμοποιεί ο κόμβος επιλογής στόχων
+	\item \textbf{amcl}: εκτελεί τον αλγόριθμο amcl που αναφέρθηκε παραπάνω
+	\item \textbf{coverage\_map\_node}: αποθηκεύει τα σημεία του χάρτη τα οποία έχουν καλυφθεί από την κάμερα (αλλά παρόμοιος κόμβος θα μπορούσε να χρησιμοποιηθεί για οποιονδήποτε άλλον αισθητήρα) και δημιουργεί τον χάρτη κάλυψης 
+	\item \textbf{move\_base}: Κόμβος στον οποίο εκτελείται το πακέτο move\_base και στέλνει το ρομπότ στις θέσεις που πρέπει
+	\item \textbf{robot\_state\_publisher}: κρατάει τις καταστάσεις των διάφορων τμημάτων των ρομπότ
+\end{itemize}
+
+Οι τελευταίοι τέσσερις κόμβοι εμφανίζονται σε δύο ξεχωριστά namespaces (\textbf{/robot1} και \textbf{/robot2}) μια φορά για το κάθε ρομπότ. Αρά δηλαδή το amcl, για παράδειγμα, εμφανίζεται ώς \textbf{/robot1/amcl} και \textbf{/robot2/amcl}. \\
+Οι κόμβοι οι οποίοι υλοποιήθηκαν στα πλαίσια της εργασίες είναι οι \textbf{coverage\_map\_merger}, \textbf{coverage\_map\_node} kαι \textbf{target\_select\_node}. Ακολουθεί η παρουσίαση της υλοποίησής τους.
+
+
+\subsubsection{coverage\_map\_node} Αυτός ο κόμβος εγγράφεται στο θέμα του γνωστού χάρτη (που είναι ένα πλέγμα πιθανοτήτων) και αναλαμβάνει να παρουσιάσει τα τμήματα του χάρτη τα οποία είναι καλυμμένα όπως ήδη αναφέρθηκε. Στην επόμενη σελίδα φαίνεται ή κύρια συνάρτηση η οποία καθορίζει τον κώνο κάλυψης. 
+
+\newpage
+
+\begin{algorithmic}
+	\State $pose \gets pose\_from\_amcl$
+	\For {each pixel the robot occupies}
+		\State $coverage \gets covered $
+	\EndFor
+	\For {each pixel in the angle fov}
+		\For {each pixel in radius dist of view}
+			\State $coverage \gets covered $
+		\EndFor
+	\EndFor		
+\end{algorithmic}
+
+
+%\For{$th = 0$ to $th =360 $}
+%\begin{algorithmic}
+%	\Function{calcCone}{ogm, pose, dist\_of\_use, resolution, coverage\_width, coverage, hfov}
+%	\State $limits \gets empty\_array$
+%	\State $k \gets 0$
+%	\For{$th = 0$ to $th =360 $}
+%	\State $thRad \gets th * \pi \ 180$ 
+%	\For{$cc = 0$ to $cc = 5$}
+%	\State $x \gets pose[x] * cos(thRad)$
+%	\State $y \gets pose[y] * sin(thRad)$
+%	\State $index \gets int(x) + coverage\_width * int(y) $
+%	\State $coverage[index] \gets 100$
+%	\EndFor
+%	\EndFor
+	
+%	\For{$i = 1$ to $i = 2$}
+%	\State $minDepth \gets int(0.2/resolution)$
+%	\State $maxDepth \gets int(dist\_of\_use/resolution)$
+%	\State $theta \gets int(hfov/ 2)$
+%	\State $angles \gets pose[th]$
+	 
+%	\For{$th = -theta$ to $th = theta + 1$}
+%	\State $thRad \gets th * \pi \ 180$
+%	\For{$crosscut = minDepth$ to $maxDepth + 1$}
+%	\State $x \gets pose[x] * cos(thRad)$
+%	\State $y \gets pose[y] * sin(thRad)$
+%	\State $index \gets int(x) + coverage\_width * int(y) $
+%	\If {$ogm[int(x)][int(y)] > 49$}
+%	\State \textbf{break}
+%	\EndIf 
+%	\State $coverage[index] \gets 100$
+%	\EndFor
+%	\EndFor
+%	\EndFor
+%	\State \textbf{Return} coverage
+%	\EndFunction	
+%\end{algorithmic}
+	
+Σύμφωνα με την παραπάνω συνάρτηση θεωρούμε καλυμμένο οτιδήποτε είναι στο πεδίο της κάμερας. Αλλάζοντας τις παραμέτρους field\_of\_view και dist\_of\_view μπορούμε να προσομοιώσουμε οποιονδήποτε αισθητήρα.
+Αυτή η διαδικασία επαναλαμβάνεται περιοδικά κάθε 0.1, δευτερόλεπτα και καθώς προχωράει ο (κάθε) πράκτορας εξελίσσεται και η κάλυψη του χώρου. Παρακάτω (Εικόνα \ref{fig:coverage-map}), παρουσιάζεται η εξέλιξη της κάλυψης μέσω δύο στιγμιο-τύπων.
+\\
+
+
+\begin{figure}[!h]
+	%\setlength\figureheight{0.2\textwidth}
+	%\setlength\figurewidth{0.4\textwidth}	
+	\centering
+	\begin{subfigure}{0.5\textwidth}
+		\includegraphics[scale=0.15]{assets/images/initiation-of-coverage.png}
+		\caption{αρχικά ο κώνος κάλυψης}
+	\end{subfigure}%
+	\begin{subfigure}{0.4\textwidth}
+		\includegraphics[scale=0.15]{assets/images/after-moving.png}
+		\caption{αλλαγή καθώς ο πράκτορας κινείται}
+	\end{subfigure}
+	\caption{Μεταβολή χάρτη κάλυψης}
+	\label{fig:coverage-map}
+\end{figure}
+
+\newpage
+
+\subsubsection{coverage\_map\_merger} Αυτός ο κόμβος είναι υπεύθυνος για την ένωση των δύο επιμέρους χαρτών κάλυψης με σκοπό να ξέρουμε το σύνολο του χάρτη που έχει καλυφθεί και όχι μόνο ότι έχει καλυφθεί από τον κάθε πράκτορα ξεχωριστά. Αρχικά και σε αυτόν τον κόμβο ορίζονται οι διαστάσεις του χάρτη που έχουν αποθηκευτεί στον Σέρβερ Παραμέτρων (Parameter Server). Έπειτα εγγράφεται στα θέματα των 2 χαρτών κάλυψης και εν συνεχεία τα ενώνει σύμφωνα με τις παρακάτω εντολές. Και πάλι η ένωση γίνεται περιοδικά ανα 0.1 δευτερόλεπτα. Πολύ απλά αν ο χάρτης έχει καλυφθεί είτε από το 1 ρομπότ είτε από το άλλο τότε το σύνολο θεωρείται καλυμμένο. Τέλος ο κοινός χάρτης κάλυψης δημοσιεύεται σε ένα θέμα από όπου οι υπόλοιποι κόμβοι μπορούν να έχουν πρόσβαση.
+
+\begin{algorithmic}
+	\For{$i = 0$ to $map\_width$} 
+	\For{$j = 0$ to $map\_height$}
+	\If {coverage1[i][j] is covered or coverage2[i][j] is covered}
+	\State $ coverageAll[i + map\_width * j] \gets covered $
+	\Else
+	\State $ coverageAll[i + map\_width * j] \gets not\ covered $
+	\EndIf
+	\EndFor
+	\EndFor		
+\end{algorithmic}
+
+Στις εικόνες \ref{fig:seperate coverage maps}, \ref{fig:common-coverage-maps} παρουσιάζονται ο χάρτης κάλυψης του ενός πράκτορα, του δεύτερου και ο συνολικός 
+
+\begin{figure}[!h]
+	%\setlength\figureheight{0.2\textwidth}
+	%\setlength\figurewidth{0.4\textwidth}	
+	\centering
+	\begin{subfigure}{0.49\textwidth}
+		\includegraphics[scale=0.15]{assets/images/coverage-map-1.png}
+		\caption{Χάρτης κάλυψης πράκτορα 1}
+	\end{subfigure}%
+	\begin{subfigure}{0.49\textwidth}
+		\includegraphics[scale=0.15]{assets/images/coverage-map-2.png}
+		\caption{Χάρτης κάλυψης πράκτορα 2}
+	\end{subfigure}
+	\caption{Επιμέρους χάρτες κάλυψης}
+	\label{fig:seperate coverage maps}
+\end{figure}
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.15]{assets/images/common-coverage.png}
+	\caption{Κοινός χάρτης κάλυψης}
+	\label{fig:common-coverage-maps}
+\end{figure}
+
+\newpage
+
+\subsubsection{target\_select\_node} Και εδώ φτάνουμε ίσως στον πιο σημαντικό κόμβο του συστήματος τον κόμβο ο οποίος επιλέγει στόχους. Κατά τους πειραματισμούς χρησιμοποιήθηκαν δύο μέθοδοι επιλογής στόχων αλγόριθμος εύρεσης ορίου κάλυψης (frontier coverage) και η εύρεση μέσω του τοπολογικού γράφου (topological graph).
+
+\paragraph{frontier coverage} Σε αυτή την περίπτωση ο πράκτορας αποστέλλεται στο όριο μεταξύ καλυμμένου και ακάλυπτου χώρου. Αρχικά αυτή η μέθοδος είχε χρησιμοποιηθεί για υλοποι-ήσεις SLAM όπου ο πράκτορας πήγαινε στα όρια εξερευνημένου και ανεξερεύνητου χώρου \cite{Yamauchi}. Αλλά με μια μικρή παραλλαγή, μπορεί να εφαρμοστεί και σε υλοποιήσεις κάλυψης. 
+
+\subparagraph{Εύρεση ορίου κάλυψης} Όπως έχει ειπωθεί και πριν ο χάρτης κάλυψης είναι το μέσο για να γνωρίζουμε ποιες περιοχές έχουν καλυφθεί και ποιες όχι. Μοιάζει με τον χάρτη κατάληψης μόνο που η τιμή κάθε κελιού αναπαριστά την πιθανότητα ένα σημείο να έχει καλυφθεί από τους αισθητήρες. \cite{2013}. Η εύρεση του ορίου κάλυψης λοιπόν γίνεται μέσω του αλγορίθμου brushfire ο οποίος αποδίδει πολύ καλά σε χάρτες πλέγματος πιθανοτήτων.
+Η κεντρική ιδέα του αλγορίθμου είναι η εκκίνηση από κάποιο σημείο και ο τερματισμός του όταν ικανοποιηθεί η συνθήκη. Παρακάτω παρουσιάζεται η υλοποίηση του αλγορίθμου brushfire για το εν λόγω πρόβλημα κάλυψης σε μορφή ψευδοκώδικα.
+
+%\begin{algorithmic}
+%\Function{coverageLimitsBrush}{ogm, coverage, pose, origin, resolution}
+%\State $limits \gets empty\_array$
+%\State $k \gets 0$
+%\For{$i = 1$ to $coverage width - 1$}
+%\For{$j = 1$ to $coverage length - 1$}
+%\If {$coverage[i][j] = 0$}
+%\State $ogm\_ok \gets true$
+%\EndIf
+%\For{$ii = -1$ to $ii = 2$}
+%\For{$jj = -1$ to $jj = 2$}
+%\If{$ogm[i + ii][j + jj] > 49$}
+%\State $ogm\_ok \gets false$
+%\EndIf
+%\EndFor
+%\EndFor
+%\If{$ogm\_ok = false$}
+%\State continue
+%\EndIf
+%\State $cov\_ok \gets false$
+%\For{$ii = -1$ to $ii = 2$}
+%\For{$jj = -1$ to $jj = 2$}
+%\If{$coverage[i + ii][j + jj] = 0$}
+%\State $cov\_ok \gets true$
+%\EndIf
+%\EndFor
+%\EndFor
+%\If{$cov\_ok = True$}
+%\State $limits[k] \gets i * resolution + origin[x], j * resolution + origin[y] $
+%\State $ k \gets k + 1 $
+%\EndIf
+%\EndFor
+%\EndFor
+%\State \textbf{return} limits
+%\EndFunction
+%\end{algorithmic}
+
+\begin{algorithmic}
+	\State $pose \gets pose\_from\_amcl $
+	\ForAll {covered pixels in coverage map expand starting from pose}
+	\If {pixel not covered}
+	\State	$goals \gets pixel$
+	\EndIf
+	\EndFor
+\end{algorithmic}
+
+
+Στον προηγούμενο αλγόριθμο για το σύνολο του επιθέματος κάλυψης ελέγχουμε πότε η τιμή σταματάει να είναι εκατό ξεκινώντας από την θέση του ρομπότ. Όταν η τιμή γίνει μηδέν τότε προσθέτουμε το σημείο σε ένα σύνολο, το οποίο θα είναι και οι τελικοί διαθέσιμοι στόχοι. Παρακάτω φαίνεται μια εικόνα από την εκτέλεση του αλγορίθμου. Εικόνα \ref{fig:target at cov limits}
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.15]{assets/images/target-at-cov-lims.png}
+	\caption{Αποστολή στόχου στο όριο καλυμμένου και ακάλυπτου χώρου}
+	\label{fig:target at cov limits}
+\end{figure}
+
+Η διαδικασία αυτή συνεχίζεται μέχρις ότου καλυφθεί όλος χάρτης. Οι νέοι στόχοι επιλέγονται με βάση το νέο επίθεμα. 
+
+\subparagraph{φιλτράρισμα στόχων}
+
+Πολλές φορές βεβαία κάποιοι στόχοι μπορεί να τύχει να πέσουν πάνω σε τοίχο και σε αυτή την περίπτωση να μην μπορέσει ο πράκτορας να τους προσεγγίσει. Για την αποφυγή αυτού του προβλήματος χρησιμοποιείται η παρακάτω μέθοδος,
+και παρουσ-ιάζεται σε μορφή ψευδοκώδικα.  
+
+\begin{algorithmic}	
+\State $throw \gets empty\_array$
+\State $k \gets 0$
+\ForAll{ goals in brush}
+\For{$ i = -9$ to $i = 10 $}
+\If{$int(goal[x]/resolution - origin[x]/resolution) + i \geq  ogm\_length:$}
+\State break
+\EndIf
+\If{$ogm[goal[x]/resolution - origin[x]/resolution +  i ][goal[y]/resolution - origin[y]/resolution ] > 49$}
+\State $throw[k]  \gets goal $
+\State $k \gets k + 1$
+\EndIf		
+\EndFor
+\EndFor
+\end{algorithmic}
+
+Εδώ ψάχνουμε για εμπόδια στον άξονα yy' με κέντρο τον στόχο. Η ίδια διαδικασία γίνεται και για εύρεση στόχων στον άξονα xx' αλλά και στις δύο κύριες διαγώνιους. Η ευθεία στην οποία ψάχνουμε αλλάζει πειράζοντας τα πρόσημα στον δεύτερη έλεγχο του βρόγχου επανάληψης. Η μέθοδος απέδωσε μιας και σπάνια ο πράκτορας διάλεγε στόχο κοντά σε τοίχο. 
+
+Οι στόχοι που περνάν το φιλτράρισμα ταξινομούνται και τελικά επιλέγεται ο στόχος που είναι πιο κοντά στο ρομπότ.
+
+\paragraph{Επιλογή στόχου μέσω τοπολογικού γράφου}
+
+Αν και η προηγούμενη μέθοδος μας λύνει το πρόβλημα είναι κάπως αφελής (naive). Για αυτό τον λόγο τελικά χρησιμοποιήθηκε ο τοπολογικός γράφος για επιλογή στόχων βαθύτερα μέσα στον χάρτη για αποδοτικότερη κάλυψη του τελικού χώρου. Ο τελικός στόχος είναι ο κοντινότερος κόμβος κάθε στιγμή στο ρομπότ.
+
+\subparagraph{Voronoi Diagram}
+Αρχικά λοιπόν πρέπει να κατασκευασθεί το διάγραμμα Voronoi το οποίο είναι και ο τελικός γράφος. Αυτό γίνεται πάλι με εφαρμογή του αλγορίθμου brushfire, μόνο που τώρα ξεκινάει από κελιά με εμπόδια και σταματάει όταν έχει εξαπλωθεί σε όλο τον χώρο. Όταν δύο κύματα που έχουν ξεκινήσει από δύο διαφορετικά εμπόδια (δηλαδή εμπόδια χωρίς κοινό σημείο), συναντηθούν εκεί χαράσσεται ο γράφος. 
+Παρακάτω φαίνεται ο ψευδοκώδικας. 
+
+\begin{algorithmic}
+	\State $brush \gets empty\_matrix$
+	\For{$ i = ogm\_limit[min\_x]$ to $i = ogm\_limits[max\_x]$}
+	\For{$ j = ogm\_limit[min\_j]$ to $j = ogm\_limits[max\_j]$}
+	\If{$ogm[i][j] > 49 $ or $ ogmp[i][j] == -1 $}
+	\State local[i][j] = 0
+	\EndIf
+	\EndFor
+	\EndFor
+\end{algorithmic}
+
+Τελικά προκύπτει το παρακάτω διάγραμμα: Εικόνα \ref{fig:Voronoi Diagram}.
+ 
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.35]{assets/images/A-generalized-Voronoi-Diagram.png}
+ 	\caption{Διάγραμμα Voronoi}
+ 	\label{fig:Voronoi Diagram}
+\end{figure}
+ 
+ \newpage
+ 
+\subparagraph{Skeletonization}
+ 
+ Η αλήθεια είναι ότι ένα πραγματικό Voronoi διάγραμμα παρουσιάζει διάφορες παρασιτικές διακλαδώσεις μιας και τα πραγματικά εμπόδια δεν είναι λεία. Για αυτό λοιπόν επειδή θέλουμε ο γράφος να είναι λείος και να έχει πάχος ενός κελιού χρησιμο-ποιούμε τον τελεστή Thining. Στο τελεστή Thinning χρησιμοποιούνται 8 kernels για την υλοποίηση. Τέσσερις για τις πλευρές\hspace{0.06 cm} (U, D, L, R) και τέσσερις για τις γωνίες.  
+  
+ Το σύνολο των Kernels φαίνονται παρακάτω. Εικόνες \ref{fig:line kernels}, \ref{fig:corner kernels}.
+ 
+ \begin{figure}[!h]
+ 	\centering
+ 	\includegraphics[scale=0.2]{assets/images/line-kernels.png}
+ 	\caption{Πυρήνες γραμμών}
+ 	\label{fig:line kernels}
+ \end{figure}
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.2]{assets/images/corner-kernels.png}
+	\caption{Πυρήνες γωνιών}
+	\label{fig:corner kernels}
+\end{figure} 
+ 
+\newpage
+ 
+\subparagraph{Pruining}
+
+Ακόμη πρέπει να αποβάλλουμε τις παρασιτικές γραμμές που τυχόν προκύπ-τουν λόγω θορύβου. Και εδώ οι κώδικες είναι γραμμένοι και χάριν απλότητας παραλείπονται.
+Οι πυρήνες για την απομάκρυνση  των παρασιτικών γραμμών είναι οι παρακάτω.
+Εικόνα \ref{fig:prune kernels}.
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.2]{assets/images/lines-prune.png}
+	%\caption{Πυρήνες γραμμών}
+	%\label{fig:line kernels}
+\end{figure}
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.2]{assets/images/corners-prune.png}
+	\caption{Pruning kernels}
+	\label{fig:prune kernels}
+\end{figure} 
+
+Τέλος μετά από όλη αυτή την διαδικασία στις τελικές τομές των γραμμών του διαγράμ-ματος Voronoi, προκύπτουν οι τελικοί κόμβοι οι οποίοι είναι και οι διαθέσιμοι στόχοι. Λόγω αδυναμίας εμφάνισης όλου του διαγράμματος Voronoi,
+παρουσιάζονται οι στόχοι όπως φαίνονται στο rviz. Ταυτόχρονα βλέπουμε τους δύο πράκτορες να προσπαθούν να προσεγγίσουν τους στόχους οι οποίοι προκύπτουν σύμφωνα με την λογική που αναφέραμε παραπάνω. Οι στόχοι αναπαριστώνται ως πράσινα τετραγωνάκια. Εικόνα \ref{fig:topo graph goals}
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.2]{assets/images/targets-from-topo-graph.png}
+	\caption{Στόχοι όπως προκύπτουν από τον τοπολογικό γράφο}
+	\label{fig:topo graph goals}
+\end{figure}
+
+
+\subparagraph{Μέθοδος επιλογής στόχων} Τελικά μετά από αρκετούς πειρασμούς η μέθοδος επιλογής στόχων που επιλέχτηκε ήταν η μέθοδος προσέγγισης του κοντινότερου κόμβου. Αν και έγιναν αρκετές δοκιμές αξιολόγησης των στόχων τελικά, στα πλαίσια του γνωστού χάρτη, φάνηκε να αποδίδει καλά. Αν και σε εφαρμογές αγνώστων χαρτών υπάρχουν καλύτερες προσεγγίσεις \cite{Tsardoulias2013}. Η απόσταση λοιπόν του κόμβου $ i $ από την θέση πράκτορα μετράται με την παρακάτω σχέση: Σχέση (1)
+
+\begin{equation}
+D_{i} = \sqrt{ (Pose_x - Node_{xi})^2 + (Pose_y - Node_{yi})^2   }
+\end{equation}
+ 
+Οι κόμβοι ήταν πάντα σε ικανοποιητικά μακρινή απόσταση όποτε δεν λήφθηκε μέριμνα για επιλογή στόχων πολύ κοντά στο ρομπότ όπως θα γινόταν σε επιλογή στόχου μέσω κοντινότερου ακάλυπτου σημείου μόνο. 
+Μάλιστα όπως θα φανεί στα πειράματα στην περίπ-τωση του μεγάλου χάρτη στο τέλος της εξερεύνησης χρησιμοποιήθηκε η μέθοδος προσέγ-γισης κοντινότερου ακάλυπτου σημείου διότι ο τοπολογικός γράφος δεν έφτανε για να καλυφθεί όλος ο χώρος. 
+Τέλος για την τελική διεύθυνση του πράκτορα χρησιμοποιήθηκε η παρακάτω σχέση: Σχέση (2).
+Αφού λοιπόν έχει επιλεχθεί ο στόχος.
+
+\begin{equation}
+th = \arctan{\frac{Goal_y - Pose_y}{Goal_x - Pose_x}} 
+\end{equation}
+
+Δηλαδή τελικά ο πράκτορας στρέφεται στην διεύθυνση της ευθείας που ενώνει τον στόχο με την θέση του πράκτορα. Παρακάτω φαίνεται το διάγραμμα ροής επιλογής στόχων Εικόνα: \ref{fig:flow-chart}, και ένα γενικότερο διάγραμμα του συστήματος για καλύτερη κατανόηση. Εικόνα: \ref{fig:system-chart}. Στο επόμενο κεφάλαιο συνεχίζουμε με την παρουσίαση των πειραμάτων.
+
+ 
+ \begin{figure}[!h]
+ 	\centering
+ 	\includegraphics[scale=0.35]{assets/images/flow-chart-of-topo.png}
+ 	\caption{Διάγραμμα ροής αλγορίθμου επιλογής στόχων}
+ 	\label{fig:flow-chart}
+ \end{figure}
+ 
+ \begin{figure}[!ht]
+ 	\centering
+ 	\includegraphics[scale=0.35]{assets/images/System-Diagram.png}
+ 	\caption{Διάγραμμα Συστήματος}
+ 	\label{fig:system-chart}
+ \end{figure}
